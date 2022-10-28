@@ -6,11 +6,16 @@ import "@openzeppelin/contracts/token/ERC721/ERC721.sol";
 import "@openzeppelin/contracts/token/ERC721/extensions/ERC721URIStorage.sol";
 import "@openzeppelin/contracts/access/Ownable.sol";
 import "@openzeppelin/contracts/utils/Counters.sol";
+import "@chainlink/contracts/src/v0.8/interfaces/AggregatorV3Interface.sol";
 
 contract BullBear is ERC721, ERC721URIStorage, Ownable {
     using Counters for Counters.Counter;
 
     Counters.Counter private _tokenIdCounter;
+
+    AggregatorV3Interface public priceFeed;
+
+    int256 public currentPrice;
 
     string[] bullIpfsURIs = [
         "https://ipfs.io/ipfs/bafkreigstxcwompphrioktkxxr3okwl2o7mj52qyklrrkriefg6dmmng2q?filename=gamer_bull.json",
@@ -21,7 +26,18 @@ contract BullBear is ERC721, ERC721URIStorage, Ownable {
         "https://ipfs.io/ipfs/bafkreiaafmeaaokac25tozliz2ehg7tqrbs3j2jekxg7hpokgbrlwfyxsy?filename=coolio_bear.json"
     ];
 
-    constructor() ERC721("Bull&Bear", "BBTK") {}
+    /**
+     * Network: Goerli
+     * Aggregator: ETH/USD
+     * Address: 0xD4a33860578De61DBAbDc8BFdb98FD742fA7028e
+     */
+    constructor() ERC721("Bull&Bear", "BBTK") {
+        priceFeed = AggregatorV3Interface(
+            0xD4a33860578De61DBAbDc8BFdb98FD742fA7028e
+        );
+        // set the price for the chosen currency pair.
+        currentPrice = getLatestPrice();
+    }
 
     function safeMint(address to) public {
         // Current counter value will be the minted token's token ID.
@@ -36,6 +52,20 @@ contract BullBear is ERC721, ERC721URIStorage, Ownable {
         // Default to a bull NFT
         string memory defaultUri = bullIpfsURIs[0];
         _setTokenURI(tokenId, defaultUri);
+    }
+
+    /**
+     * Returns the latest price
+     */
+    function getLatestPrice() public view returns (int256) {
+        (
+            uint80 roundID,
+            int256 price,
+            uint256 startedAt,
+            uint256 timeStamp,
+            uint80 answeredInRound
+        ) = priceFeed.latestRoundData();
+        return price;
     }
 
     // The following functions are overrides required by Solidity.
